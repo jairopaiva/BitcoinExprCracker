@@ -63,6 +63,27 @@ fun WarningBanner(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
+fun InfoCard(text: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(14.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+@Composable
+fun ErrorCard(message: String, modifier: Modifier = Modifier) {
+    WarningBanner(text = message, modifier = modifier)
+}
+
+@Composable
 fun CopyableText(
     label: String,
     value: String,

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
@@ -28,10 +29,24 @@ fun LabsScreen() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             FilterChip(selected = selected == "Curve", onClick = { selected = "Curve" }, label = { Text("Toy curve") })
+            FilterChip(selected = selected == "ECDLP", onClick = { selected = "ECDLP" }, label = { Text("ECDLP") })
             FilterChip(selected = selected == "Neural", onClick = { selected = "Neural" }, label = { Text("Neural toy") })
+            FilterChip(selected = selected == "NN eval", onClick = { selected = "NN eval" }, label = { Text("NN eval") })
+            FilterChip(selected = selected == "Genetic", onClick = { selected = "Genetic" }, label = { Text("Genetic") })
+            FilterChip(selected = selected == "Side-channel", onClick = { selected = "Side-channel" }, label = { Text("Side-channel") })
         }
-        if (selected == "Curve") ToyCurveScreen() else NeuralLabScreen()
+        when (selected) {
+            "Curve" -> ToyCurveScreen()
+            "ECDLP" -> EcdlpVisualizerScreen()
+            "Neural" -> NeuralLabScreen()
+            "NN eval" -> NeuralEvalScreen()
+            "Genetic" -> GeneticLabScreen()
+            else -> SideChannelScreen()
+        }
     }
 }
