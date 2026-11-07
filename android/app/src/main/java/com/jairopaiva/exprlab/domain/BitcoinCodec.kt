@@ -74,7 +74,7 @@ object BitcoinCodec {
         var chk = 1L
         for (value in values) {
             val top = chk ushr 25
-            chk = (chk shl 5) xor value.toLong()
+            chk = ((chk and 0x1ffffffL) shl 5) xor value.toLong()
             for (i in 0 until 5) {
                 if (((top ushr i) and 1L) == 1L) chk = chk xor BECH32_GENERATOR[i].toLong()
             }
@@ -90,7 +90,7 @@ object BitcoinCodec {
 
     private fun hrpExpand(hrp: String): IntArray {
         val out = IntArray(hrp.length * 2 + 1)
-        for (i in hrp.indices) out[i] = hrp[i].code - 33
+        for (i in hrp.indices) out[i] = hrp[i].code ushr 5
         for (i in hrp.indices) out[hrp.length + 1 + i] = hrp[i].code and 31
         out[hrp.length] = 0
         return out
@@ -114,5 +114,94 @@ object BitcoinCodec {
         }
         if (pad && bits > 0) result.add((acc shl (toBits - bits)) and maxv)
         return if (bits >= fromBits) null else result.toIntArray()
+    }
+
+    fun base58Decode(text: String): ByteArray? {
+        if (text.isEmpty()) return null
+        var zeros = 0
+        while (zeros < text.length && text[zeros] == '1') zeros++
+        var number = BigInteger.ZERO
+        val fiftyEight = BigInteger.valueOf(58)
+        for (index in zeros until text.length) {
+            val digit = BASE58_ALPHABET.indexOf(text[index])
+            if (digit < 0) return null
+            number = number.multiply(fiftyEight).add(BigInteger.valueOf(digit.toLong()))
+        }
+        val raw = number.toByteArray()
+        var start = 0
+        while (start < raw.size && raw[start] == 0.toByte()) start++
+        val magnitude = raw.copyOfRange(start, raw.size)
+        val out = ByteArray(zeros + magnitude.size)
+        System.arraycopy(magnitude, 0, out, zeros, magnitude.size)
+        return out
+    }
+
+    fun base58CheckDecode(text: String): ByteArray? {
+        val decoded = base58Decode(text) ?: return null
+        if (decoded.size < 5) return null
+        val payload = decoded.copyOfRange(0, decoded.size - 4)
+        val checksum = decoded.copyOfRange(decoded.size - 4, decoded.size)
+        val expected = sha256(sha256(payload)).copyOfRange(0, 4)
+        return if (checksum.contentEquals(expected)) payload else null
+    }
+
+    fun decodeP2pkhAddress(address: String, testnet: Boolean = false): ByteArray? {
+        val payload = base58CheckDecode(address) ?: return null
+        if (payload.size != 21) return null
+        val expectedVersion = if (testnet) 0x6f else 0x00
+        if ((payload[0].toInt() and 0xff) != expectedVersion) return null
+        return payload.copyOfRange(1, 21)
+    }
+
+    fun isValidP2pkhAddress(address: String, testnet: Boolean = false): Boolean =
+        decodeP2pkhAddress(address, testnet) != null
+
+    fun bech32Decode(address: String): Triple<String, Int, ByteArray>? {
+        if (address.isEmpty() || address.any { it.isUpperCase() }) return null
+        val separator = address.lastIndexOf('1')
+        if (separator <= 0 || separator >= address.length - 1) return null
+        val hrp = address.substring(0, separator)
+        if (!hrp.all { it.code in 33..126 }) return null
+        val dataPart = address.substring(separator + 1)
+        if (dataPart.length < 7) return null
+        val data = IntArray(dataPart.length)
+        for (i in dataPart.indices) {
+            val value = BECH32_CHARSET.indexOf(dataPart[i])
+            if (value < 0) return null
+            data[i] = value
+        }
+        if (bech32Polymod(hrpExpand(hrp) + data) != 1) return null
+        val version = data[0]
+        if (version !in 0..16) return null
+        val payload = data.copyOfRange(1, data.size - 6)
+        val program = convertBits5To8(payload) ?: return null
+        return Triple(hrp, version, program)
+    }
+
+    fun decodeP2wpkhAddress(address: String, testnet: Boolean = false): ByteArray? {
+        val decoded = bech32Decode(address) ?: return null
+        val expectedHrp = if (testnet) "tb" else "bc"
+        if (decoded.first != expectedHrp || decoded.second != 0 || decoded.third.size != 20) return null
+        return decoded.third
+    }
+
+    fun isValidP2wpkhAddress(address: String, testnet: Boolean = false): Boolean =
+        decodeP2wpkhAddress(address, testnet) != null
+
+    private fun convertBits5To8(values: IntArray): ByteArray? {
+        var acc = 0
+        var bits = 0
+        val out = mutableListOf<Int>()
+        for (value in values) {
+            if (value !in 0..31) return null
+            acc = (acc shl 5) or value
+            bits += 5
+            if (bits >= 8) {
+                bits -= 8
+                out.add((acc ushr bits) and 0xff)
+            }
+        }
+        if (bits > 0 && (acc and ((1 shl bits) - 1)) != 0) return null
+        return out.map { it.toByte() }.toByteArray()
     }
 }

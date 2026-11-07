@@ -78,11 +78,13 @@ object Secp256k1 {
 
     private fun scalarMultiplyJacobian(scalar: BigInteger): JacobianPoint {
         require(scalar.signum() > 0) { "Scalar must be positive" }
+        val reduced = scalar.mod(N)
+        if (reduced.signum() == 0) return infinity
         var result = infinity
         var addend = generatorJacobian
-        for (bit in scalar.bitLength() - 1 downTo 0) {
+        for (bit in reduced.bitLength() - 1 downTo 0) {
             result = jacobianDouble(result)
-            if (scalar.testBit(bit)) result = jacobianAdd(result, addend)
+            if (reduced.testBit(bit)) result = jacobianAdd(result, addend)
         }
         return result
     }

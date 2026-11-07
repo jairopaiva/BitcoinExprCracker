@@ -1,6 +1,8 @@
 package com.jairopaiva.exprlab.domain
 
+import java.math.BigInteger
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -53,5 +55,12 @@ class Secp256k1Test {
             assertTrue(Secp256k1.isOnCurve(point))
             assertEquals(point, Secp256k1.decompress(Secp256k1.compressed(point)))
         }
+    }
+
+    @Test
+    fun scalarMultiplyReducesModuloGroupOrder() {
+        val expected = Secp256k1.publicKeyFromPrivateBytes(privateKeyOne)
+        assertNull(Secp256k1.scalarMultiply(Secp256k1.N))
+        assertEquals(expected, Secp256k1.scalarMultiply(Secp256k1.N.add(BigInteger.ONE)))
     }
 }
