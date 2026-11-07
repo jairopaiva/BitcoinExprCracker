@@ -36,7 +36,7 @@ object Secp256k1 {
         val e = mod(THREE.multiply(x2))
         val f = mod(e.multiply(e).subtract(TWO.multiply(d)))
         val x3 = f
-        val y3 = mod(e.multiply(d.subtract(f)).subtract(THREE.multiply(BigInteger.valueOf(8)).multiply(c)))
+        val y3 = mod(e.multiply(d.subtract(f)).subtract(BigInteger.valueOf(8).multiply(c)))
         val z3 = mod(TWO.multiply(point.y).multiply(point.z))
         return JacobianPoint(x3, y3, z3)
     }
@@ -57,13 +57,14 @@ object Secp256k1 {
         }
 
         val h = mod(u2.subtract(u1))
-        val r = mod(s2.subtract(s1))
         val h2 = mod(h.multiply(h))
-        val h3 = mod(h2.multiply(h))
-        val v = mod(u1.multiply(h2))
-        val x3 = mod(r.multiply(r).subtract(h3).subtract(TWO.multiply(v)))
-        val y3 = mod(r.multiply(v.subtract(x3)).subtract(s1.multiply(h3)))
-        val z3 = mod(left.z.multiply(right.z).multiply(h))
+        val i = mod(FOUR.multiply(h2))
+        val j = mod(h.multiply(i))
+        val r = mod(TWO.multiply(s2.subtract(s1)))
+        val v = mod(u1.multiply(i))
+        val x3 = mod(r.multiply(r).subtract(j).subtract(TWO.multiply(v)))
+        val y3 = mod(r.multiply(v.subtract(x3)).subtract(TWO.multiply(s1).multiply(j)))
+        val z3 = mod(TWO.multiply(left.z).multiply(right.z).multiply(h))
         return JacobianPoint(x3, y3, z3)
     }
 

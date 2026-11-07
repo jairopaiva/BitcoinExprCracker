@@ -7,6 +7,8 @@ import org.junit.Test
 class Secp256k1Test {
     private val privateKeyOne = ByteArray(32).also { it[31] = 1 }
 
+    private fun smallPrivateKey(value: Int): ByteArray = ByteArray(32).also { it[31] = value.toByte() }
+
     @Test
     fun privateKeyOneHasKnownCompressedPublicKey() {
         val point = Secp256k1.publicKeyFromPrivateBytes(privateKeyOne)
@@ -32,5 +34,24 @@ class Secp256k1Test {
             "KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn",
             Secp256k1.privateKeyToWif(privateKeyOne)
         )
+    }
+
+    @Test
+    fun randomPrivateKeysProduceOnCurvePublicKeys() {
+        repeat(3) {
+            val privateKey = Secp256k1.randomPrivateKey()
+            val point = Secp256k1.publicKeyFromPrivateBytes(privateKey)
+            assertTrue(Secp256k1.isOnCurve(point))
+            assertEquals(point, Secp256k1.decompress(Secp256k1.compressed(point)))
+        }
+    }
+
+    @Test
+    fun smallScalarsProduceOnCurvePublicKeys() {
+        for (value in 1..20) {
+            val point = Secp256k1.publicKeyFromPrivateBytes(smallPrivateKey(value))
+            assertTrue(Secp256k1.isOnCurve(point))
+            assertEquals(point, Secp256k1.decompress(Secp256k1.compressed(point)))
+        }
     }
 }
